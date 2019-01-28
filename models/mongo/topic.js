@@ -10,9 +10,9 @@ const TopicSchema = new Schema({
     number: Number,
     required: Number,
     multi: Number,
-    othervalue: Number,
-    value: String,
+    other_value: Number,
     follow: String,
+    textarea: Number,
     create: Date,
     status: {type: Number, default: 0},
 })
@@ -28,8 +28,8 @@ async function create(params) {
         number,
         required,
         multi,
-        othervalue,
-        value,
+        other_value,
+        textarea,
         follow,
     } = params;
     const create = Date.now();
@@ -41,9 +41,9 @@ async function create(params) {
         number,
         required,
         multi,
-        othervalue,
+        other_value,
+        textarea,
         follow,
-        value,
         create,
     })
     let created = await topic.save()
@@ -54,7 +54,9 @@ async function create(params) {
 }
 
 async function getListByIssueId(issue_id) {
-    return await TopicModel.find({issue_id})
+    const flow = TopicModel.find({issue_id});
+    flow.sort({'number': 1});
+    return await flow
         .catch(e => {
             console.log('error getting topic by issue_id', e);
         })
@@ -67,9 +69,17 @@ async function deleteOneTopic(topic_id) {
         })
 }
 
+async function deleteTopicsByIssueId(id) {
+    return await TopicModel.deleteMany({issue_id: id})
+        .catch(e => {
+            console.log('error delete topics by issue_id', e);
+        })
+}
+
 module.exports = {
     model: TopicModel,
     create,
     getListByIssueId,
     deleteOneTopic,
+    deleteTopicsByIssueId,
 }

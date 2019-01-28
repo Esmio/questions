@@ -6,6 +6,7 @@ const Errors = require('../errors');
 const Issue = require('../models/mongo/issue');
 const Topic = require('../models/mongo/topic');
 const Option = require('../models/mongo/option');
+const Result = require('../models/mongo/result');
 
 // 问卷
 router.route('/issue')
@@ -98,12 +99,15 @@ router.route('/issue/remove')
     .post(auth(), (req, res, next) => {
         (async () => {
             const { oid } = req.body;
-            const deleted = Issue.deleteIssue(oid);
-            // todo 删除题目(topics)和选项(options);
+            const deletedIssue = await Issue.deleteIssue(oid);
+            const deletedTopics = await Topic.deleteTopicsByIssueId(oid);
+            const deletedOptions = await Option.deleteOptionsByIssueId(oid);
             return {
                 code: 0,
                 data: {
-                    deleted,
+                    deletedIssue,
+                    deletedTopics,
+                    deletedOptions,
                 }
             }
         })()
@@ -126,7 +130,11 @@ router.route('/topic')
                 type,
                 title,
                 number,
-                required
+                required,
+                follow,
+                other_value,
+                textarea,
+                multi,
             } = req.body
             const topic = await Topic.create({
                 issue_id,
@@ -134,7 +142,11 @@ router.route('/topic')
                 type,
                 title,
                 number,
-                required
+                required,
+                follow,
+                other_value,
+                textarea,
+                multi,
             })
             return {
                 code: 0,
@@ -154,7 +166,63 @@ router.route('/topic')
     })
 // 题目列表
 router.route('/topic/list')
-    .post((req, res, next) => {
+    .get((req, res, next) => {
+        (async () => {
+            const { issue_id } = req.query;
+            const issue = await Issue.getIssueById(issue_id);
+            if(!!issue && issue.status !== 1) throw new Error('issue not open or exist');
+            const listproto = await Topic.getListByIssueId(issue_id);
+            const promises = listproto.map(async (item, index) => {
+                const {
+                    _id,
+                    number,
+                    required,
+                    type,
+                    create,
+                    issue,
+                    issue_id,
+                    title,
+                    other_value,
+                    multi,
+                    follow,
+                    textarea,
+                } = item;
+                const followJSON = !!follow ? JSON.parse(follow) : undefined;
+                const options = await Option.getOptionsByTopicId(_id);
+                return {
+                    _id,
+                    number,
+                    required,
+                    type,
+                    create,
+                    issue,
+                    issue_id,
+                    title,
+                    other_value,
+                    multi,
+                    follow: followJSON,
+                    textarea,
+                    options,
+                }
+            })
+            const list = await Promise.all(promises);
+            return {
+                code: 0,
+                data: {
+                    list,
+                }
+            }
+        })()
+            .then(r => {
+                res.header('Access-Control-Allow-Origin', ['*']);                                
+                res.json(r)
+            })
+            .catch(e => {
+                console.log('get /api/question/topic/list', e);
+                next(e);
+            })
+    })
+    .post(auth(), (req, res, next) => {
         (async () => {
             const { issue_id } = req.body;
             const listproto = await Topic.getListByIssueId(issue_id);
@@ -168,7 +236,12 @@ router.route('/topic/list')
                     issue,
                     issue_id,
                     title,
+                    other_value,
+                    multi,
+                    follow,
+                    textarea,
                 } = item;
+                const followJSON = !!follow ? JSON.parse(follow) : undefined;
                 const options = await Option.getOptionsByTopicId(_id);
                 return {
                     _id,
@@ -179,6 +252,10 @@ router.route('/topic/list')
                     issue,
                     issue_id,
                     title,
+                    other_value,
+                    multi,
+                    follow: followJSON,
+                    textarea,
                     options,
                 }
             })
@@ -229,11 +306,13 @@ router.route('/option')
     .post((req, res, next) => {
         (async () => {
             const {
+                issue_id,
                 topic_id,
                 text,
                 value,
             } = req.body;
             const option = await Option.create({
+                issue_id,
                 topic_id,
                 text,
                 value,
@@ -304,17 +383,25 @@ router.route('/submit')
     .post((req, res, next) => {
         (async () => {
             const {
-                issue,
+                issue_id,
                 uid,
                 items,
             } = req.body;
-            console.log(issue, uid, items)
+            console.log(issue_id, uid, items)
+            const existed = await Result.findExistedOne({
+                issue_id,
+                uid,
+            })
+            if(!!existed) throw new Errors.DuplicatedError('uid of this issue');
+            const created = await Result.create({
+                issue_id,
+                uid,
+                items,
+            });
             return {
                 code: 0,
                 data: {
-                    issue,
-                    uid,
-                    items,
+                    created,
                 }
             }
         })()
@@ -323,7 +410,29 @@ router.route('/submit')
                 res.json(r)
             })
             .catch(e => {
-                console.log('post /api/questions', e);
+                console.log('post /api/questions/submit', e);
+                next(e)
+            })
+    })
+
+router.route('/result/list')
+    .get((req, res, next) => {
+        (async () => {
+            const {issue_id} = req.query;
+            const results = await Result.findResultsByIssueId(issue_id);
+            return {
+                code: 0,
+                data: {
+                    results,
+                }
+            }
+        })()
+            .then(r => {
+                res.header('Access-Control-Allow-Origin', ['*']);                
+                res.json(r)
+            })
+            .catch(e => {
+                console.log('get /api/questions/result/list', e);
                 next(e)
             })
     })

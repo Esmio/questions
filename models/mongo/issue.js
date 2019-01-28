@@ -34,6 +34,13 @@ async function create(params) {
     return created;
 }
 
+async function getIssueById(id) {
+    return await IssueModel.findOne({_id: id})
+        .catch(e => {
+            console.log('error get one issu by _id', e);
+        })
+}
+
 async function list(params = { page: 0, pageSize: 10 }) {
     const {page, pageSize} = params;
     const flow = IssueModel.find({});
@@ -71,6 +78,7 @@ async function updateIssue(oid, options) {
 module.exports = {
     model: IssueModel,
     create,
+    getIssueById,
     list,
     deleteIssue,
     updateIssue,

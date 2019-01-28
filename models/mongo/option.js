@@ -6,6 +6,7 @@ const now = new Date();
 
 const OptionSchema = new Schema({
     topic_id: Schema.Types.ObjectId,
+    issue_id: Schema.Types.ObjectId,
     text: String,
     value: Number,
     create: Date,
@@ -17,6 +18,7 @@ const OptionModel = mongoose.model('option', OptionSchema);
 async function create(params) {
     let {
         topic_id,
+        issue_id,
         text,
         value,
         create,
@@ -24,6 +26,7 @@ async function create(params) {
     create = create || Date.now();
     const option = new OptionModel({
         topic_id,
+        issue_id,
         text,
         value,
         create,
@@ -63,10 +66,18 @@ async function deleteOptionsByTopicId(id) {
         })
 }
 
+async function deleteOptionsByIssueId(id) {
+    return await OptionModel.deleteMany({issue_id: id})
+        .catch(e => {
+            throw new Error('error delete options by issue_id');
+        })
+}
+
 module.exports = {
     model: OptionModel,
     create,
     getOptionsByTopicId,
     deleteOneOption,
     deleteOptionsByTopicId,
+    deleteOptionsByIssueId,
 }

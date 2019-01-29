@@ -20,6 +20,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'm')));
+app.use(express.static(path.join(__dirname, 'd')));
+
+app.use('/m', express.static(path.join(__dirname, 'm')));
+app.use('/d/*', express.static(path.join(__dirname, 'd')));
 
 app.use('/', indexRouter);
 

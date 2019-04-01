@@ -29,7 +29,7 @@ app.use('/d/*', express.static(path.join(__dirname, 'd')));
 app.use('/', indexRouter);
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use('*', function(req, res, next) {
   next(createError(404));
 });
 
@@ -47,6 +47,8 @@ app.use(function(err, req, res, next) {
       code: err.OPCode,
       msg: err.httpMsg,
     })
+  }else if(err.statusCode === 404) {
+    if(err.statusCode === 404) res.render('error', {title: '走丢了～？', message: '找不到页面～', error: err});
   }else {
     res.header('Access-Control-Allow-Origin', ['*']);
     res.json({

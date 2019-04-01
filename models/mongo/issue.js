@@ -4,7 +4,7 @@ const Errors = require('../../errors');
 
 
 const IssueSchema = new Schema({
-    issue: String,
+    issue: {type: String, required: true},
     title: String,
     remark: String,
     create: Date,
@@ -21,6 +21,8 @@ async function create(params) {
         create,
     } = params;
     create = create || Date.now();
+    let exist = await IssueModel.findOne({issue}).catch(e => console.log('find exist issue', e));
+    if(!!exist) throw new Errors.DuplicatedError('issue');
     const question = new IssueModel({
         issue,
         title,
